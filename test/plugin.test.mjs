@@ -126,28 +126,40 @@ test('the wired pre-execute hook denies an irreversible call', async () => {
   })
 })
 
-test('the wired interrupt hook cancels a running turn on a user message', async () => {
+test('the wired interrupt hook cancels, then re-delivers the message as a waking turn', async () => {
   await withHome(() => {
     const { ctx, registered } = fakeCtx()
     apply(ctx, undefined)
     const hook = listener(registered, 'agent/inbox/inserted')
-    const cancels = []
+    const calls = []
     const agent = {
       status: 'running',
       session: { header: { cwd: process.cwd() } },
-      cancel(cause, options) { cancels.push({ cause, options }) },
+      cancel(cause, options) { calls.push({ kind: 'cancel', cause, options }) },
+      followup(message) {
+        calls.push({ kind: 'followup', message })
+        // Simulate the reentrant inbox event the re-delivery itself emits.
+        hook({ agent: this, message })
+      },
     }
-    hook({ agent, message: { source: { kind: 'user' } } })
+    const message = { id: 'm1', role: 'user', content: [{ type: 'text', text: 'do this instead' }], source: { kind: 'user' } }
+    hook({ agent, message })
+
+    const cancels = calls.filter(entry => entry.kind === 'cancel')
     assert.equal(cancels.length, 1)
     assert.deepEqual(cancels[0].cause, { kind: 'hook', reason: 'narrator: user interjection' })
-    assert.equal(cancels[0].options.keepInbox, true)
+    assert.equal(cancels[0].options, undefined, 'inbox is cleared so the newest message is re-delivered once')
+    const followups = calls.filter(entry => entry.kind === 'followup')
+    assert.equal(followups.length, 1, 'the reentrant insertion event must be ignored')
+    assert.equal(followups[0].message, message)
 
+    calls.length = 0
     hook({ agent, message: { source: { kind: 'user-question-reply' } } })
-    assert.equal(cancels.length, 1, 'question replies are not interjections')
+    assert.equal(calls.length, 0, 'question replies are not interjections')
 
     agent.status = 'idle'
-    hook({ agent, message: { source: { kind: 'user' } } })
-    assert.equal(cancels.length, 1, 'idle agents need no cancellation')
+    hook({ agent, message })
+    assert.equal(calls.length, 0, 'idle agents need no cancellation')
   })
 })
 
@@ -162,6 +174,7 @@ test('the prepended context explains what was interrupted', async () => {
       status: 'running',
       session: { header: { cwd: process.cwd() } },
       cancel() {},
+      followup() {},
     }
     await execHook({ agent, name: 'bash', arguments: { command: 'pnpm build' } }, async () => ({ kind: 'allow' }))
     inbox({ agent, message: { source: { kind: 'user' } } })

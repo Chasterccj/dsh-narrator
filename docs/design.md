@@ -89,8 +89,9 @@
 
 - 监听 `agent/inbox/inserted`：当 `message.source.kind === 'user'` 且 `agent.status === 'running'`：
   1. 记录“正在做什么”（最近一次重要动作的一行摘要，内存里维护）；
-  2. `agent.cancel({ kind: 'hook', reason: 'narrator: user interjection' }, { keepInbox: true })`；
-  3. 标记 preempt；
+  2. `agent.cancel({ kind: 'hook', reason: 'narrator: user interjection' })` **清空 inbox**（含所有尚未处理的排队消息——“最新指示优先”）；
+  3. 立即 `agent.followup(message)` 把**同一句话**重新作为唤醒输入送回。为什么不能只 `keepInbox`：DSH 在 `send()` 插入前先算好 `wakeAfterAbort`，并故意忽略由 inbox 事件重入触发的取消唤醒；只保留 inbox 会让消息永远停在队列里（已实测踩坑）。此刻信号已中止，`followup` 会正确 latch 唤醒，取消收敛后自动开新回合；
+  4. 标记 preempt；用 `redelivering` guard 挡住重送自己触发的 `agent/inbox/inserted` 重入。
 - 下一次 `agent/pre-step`（新 turn 第一 step）：prepend 一条 context：
   `人类在你执行时插话，已中止上一件事（当时：<摘要>）。以用户最新指示为准；如仍有歧义先问清楚。`
 - 不算插话：`ask_user_question` 的问答回复、定时/系统注入、队友消息、插件自己的 context（用 `source.kind` 区分）。
