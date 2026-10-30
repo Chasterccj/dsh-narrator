@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Narrator",
+    "description": "Plain-language narration around important actions, an uncertainty gate that asks before irreversible steps, and mid-run interruption that follows the newest instruction."
+  }
+}

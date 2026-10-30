@@ -1,0 +1,51 @@
+{
+  "name": "dsh-narrator",
+  "version": "0.1.0",
+  "description": "Plain-language narration, an uncertainty gate, and mid-run interruption policy for DeepSeek Harness agents.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Chasterccj",
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "narrator",
+    "agent-ux"
+  ],
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "locale",
+    "cordis.patch.yml",
+    "icon.svg",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "dsh": ">=0.2.1-rc.2 <0.3.0"
+  },
+  "scripts": {
+    "test": "node --test",
+    "pack:check": "npm pack --dry-run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Chasterccj/dsh-narrator.git"
+  },
+  "homepage": "https://github.com/Chasterccj/dsh-narrator#readme",
+  "bugs": {
+    "url": "https://github.com/Chasterccj/dsh-narrator/issues"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}
